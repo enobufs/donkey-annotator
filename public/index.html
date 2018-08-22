@@ -1,0 +1,283 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Donkey Car Annotator</title>
+<script src="jimp.min.js"></script>
+
+<style>
+    .mainPanelId {
+      width:160px;
+      align-self: center;
+    }
+    #canvasId {
+      border: 1px solid;
+      cursor: crosshair;
+      display: block;
+    }
+    #progbar {
+      width: 160px;
+      display: block;
+    }
+</style>
+
+<script type="text/javascript">
+const IMG_WIDTH = 160;
+const IMG_HEIGHT = 120;
+const IMG_HRZ_Y = 32;
+const IMG_GRD_Y = 150;
+let anno = null;
+
+class Annotator {
+    constructor() {
+        this._canvas = document.getElementById('canvasId');
+        this._ctx = this._canvas.getContext("2d");
+        this._ctx.lineWidth = 1;
+        this._ctx.lineCap = "round";
+        this._result = document.getElementById('resultId');
+        this._bar = document.getElementById("progbar");   
+        this._btnPlay = document.getElementById("btnPlay");   
+        this._records = null;
+        this._nImages = 0;
+        this._currRec = null;
+        this._currImgData = null;
+        this._currImgIdx = 0;
+        this._prevImgIdx = -1;
+        this._carPos = { x: IMG_WIDTH / 2, y: IMG_GRD_Y };
+        this._curPos = { x: IMG_WIDTH / 2, y: IMG_GRD_Y };
+        this._targetPos = { x: IMG_WIDTH / 2, y: IMG_HEIGHT / 2 };
+        this._playTimer = null;
+    }
+
+    start() {
+        this._canvas.addEventListener('mousemove',(ev) => {
+            var rect = this._canvas.getBoundingClientRect();
+            this.onMouseMove({
+                x: ev.clientX - rect.left,
+                y: ev.clientY - rect.top
+            });
+        }, false);
+
+        this._canvas.addEventListener('click', (ev) => {
+            var rect = this._canvas.getBoundingClientRect();
+            this.onMouseClick({
+                x: ev.clientX - rect.left,
+                y: ev.clientY - rect.top
+            });
+        }, false);
+
+        this._bar.addEventListener('click', () => {
+            const newIdx = parseInt(this._bar.value);
+            if ( newIdx !== this._currImgIdx) {
+                this._currImgIdx = newIdx;
+                this.update();
+            }
+        });
+
+        this.listRecords()
+        .then((records) => {
+            this._records = records;
+            this._nImages = records.length;
+            this._prevImgIdx = -1;
+            this._currImgIdx = 0;
+
+            this._bar.min = 0;
+            this._bar.max = this._nImages - 1; 
+
+            return this.update();
+        });
+    }
+
+    onMouseMove(pos) {
+        console.log(`mouse moved to (${pos.x}, ${pos.y})`);
+        this._curPos = pos;
+        this.update();
+    }
+
+    onMouseClick(pos) {
+        console.log(`mouse clicked at (${pos.x}, ${pos.y})`);
+
+        if (this._currImgIdx + 1 >= this._nImages) {
+            console.log("NO MORE DATA!");
+            return;
+        }
+        this._currImgIdx++;
+
+        return this.update();
+    }
+
+    listRecords() {
+        return new Promise((resolve, reject) => {
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function() {
+                if (this.readyState == 4){
+                    if (this.status != 200) {
+                        reject(new Error("failed to fetch data")); 
+                        return;
+                    }
+
+                    const records = JSON.parse(this.responseText);
+                    resolve(records);
+                    return;
+                }
+            };
+            xmlhttp.open("GET", "/records", true);
+            xmlhttp.send();
+        });
+    }
+
+    putImageData(dataUrl) {
+        return new Promise((resolve) => {
+            const img = new Image;
+            img.src = dataUrl
+            img.onload = () => {
+                this._ctx.drawImage(img, 0, 0);
+                resolve();
+            };
+        });
+    }
+
+    update() {
+        let promise;
+        if (this._currImgIdx == this._prevImgIdx) {
+            // Use cached data URL.
+            promise = Promise.resolve(this._currImgData);
+        } else {
+            this.updateProgressBar();
+
+            // Get new data URL from the server.
+            this._currRec = this._records[this._currImgIdx].data;
+            this.updateTarget();
+            promise = this.getImage(this._currRec['cam/image_array']);
+        }
+
+        promise
+        .then((dataUrl) => {
+            this._currImgData = dataUrl;
+            this._prevImgIdx = this._currImgIdx;
+            return this.putImageData(dataUrl);
+        })
+        .then(() => {
+            // line
+            this._ctx.beginPath();
+            this._ctx.setLineDash([4, 4])
+            this._ctx.moveTo(this._carPos.x, this._carPos.y);
+            this._ctx.lineTo(this._curPos.x, this._curPos.y);
+            this._ctx.strokeStyle = '#ffffff'
+            this._ctx.stroke();
+
+            // circle
+            this._ctx.beginPath();
+            this._ctx.arc(
+                this._targetPos.x, this._targetPos.y, 4, 0, 2 * Math.PI, false);
+            this._ctx.fillStyle = 'red';
+            this._ctx.fill();
+            this._ctx.lineWidth = 1;
+            this._ctx.strokeStyle = '#ff0000';
+            this._ctx.stroke();
+        });
+    }
+
+    updateTarget() {
+        if (!this._currRec) {
+            return;
+        }
+
+        this._targetPos = {
+            x: (IMG_WIDTH / 2) * (this._currRec['user/angle'] * 2 + 1),
+            y: IMG_HEIGHT * (1 - this._currRec['user/throttle'])
+        };
+    }
+
+    updateProgressBar() {
+        const width = Math.floor((this._currImgIdx / this._nImages) * IMG_WIDTH)
+        this._bar.value = this._currImgIdx;
+    }
+
+    getImage(fileName) {
+        return new Promise((resolve, reject) => {
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function() {
+                if (this.readyState == 4){
+                    if (this.status != 200) {
+                        reject(new Error("failed to fetch data")); 
+                        return;
+                    }
+
+                    resolve(this.responseText);
+                }
+            };
+            xmlhttp.open("GET", `/image/${fileName}`, true);
+            xmlhttp.send();
+        });
+    }
+
+    toBeginning() {
+        this._currImgIdx = 0
+        this.update();
+    }
+
+    back() {
+        //this._result.innerHTML = "back";
+        if (this._currImgIdx > 0) {
+            this._currImgIdx--;
+            this.update();
+        }
+    }
+
+    next() {
+        //this._result.innerHTML = "next";
+        if (this._currImgIdx + 1 < this._nImages) {
+            this._currImgIdx++;
+            this.update();
+        } else {
+            if (this._playTimer) {
+                this.togglePlay();
+            }
+        }
+    }
+
+    toEnd() {
+        this._currImgIdx = this._nImages - 1; 
+        this.update();
+    }
+
+    togglePlay() {
+        if (!this._playTimer) {
+            this._btnPlay.innerHTML = "Stop";
+            this._playTimer = setInterval(() => {
+                this.next();
+            }, 50);
+        } else {
+            this._btnPlay.innerHTML = "Play";
+            clearInterval(this._playTimer);
+            this._playTimer = null;
+        }
+    }
+}
+
+function start() {
+    anno = new Annotator();
+    anno.start();
+}
+
+
+</script>
+</head>
+
+<body onload="start()">
+    <h2>Donkey Car Annotator</h2>
+    <p>Click on the image to update the target (the red mark).</p>
+    <p>Hit "Play" to playback the images for a quick review.</p>
+    <div id=mainPanelId>
+    <canvas width="160" height="120" id="canvasId"></canvas>
+    <input type="range" id="progbar">
+    </div>
+    <button onclick="anno.toBeginning()">&lt;&lt;</button>
+    <button onclick="anno.back()">&lt;</button>
+    <button id="btnPlay" onclick="anno.togglePlay()">Play</button>
+    <button onclick="anno.next()">&gt;</button>
+    <button onclick="anno.toEnd()">&gt;&gt;</button>
+    <div id="resultId"></div>
+</body>
+</html>

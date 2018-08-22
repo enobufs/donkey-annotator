@@ -1,0 +1,33 @@
+{
+  "name": "donkey-annotator",
+  "version": "0.0.1",
+  "description": "Annotation tool for donkey car.",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/enobufs/donkey-annotator.git"
+  },
+  "keywords": [
+    "donkey",
+    "annotation",
+    "annotator",
+    "donkeycar",
+    "deepracing"
+  ],
+  "author": "enobufs",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/enobufs/donkey-annotator/issues"
+  },
+  "homepage": "https://github.com/enobufs/donkey-annotator#readme",
+  "devDependencies": {
+    "jimp": "^0.3.5",
+    "mocha": "^5.2.0"
+  },
+  "dependencies": {
+    "express": "^4.16.3"
+  }
+}
