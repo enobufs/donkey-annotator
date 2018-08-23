@@ -19,6 +19,9 @@
       width: 160px;
       display: block;
     }
+    button:focus {
+        outline: 0;
+    }
 </style>
 
 <script type="text/javascript">
@@ -74,7 +77,11 @@ class Annotator {
             }
         });
 
-        this.listRecords()
+        this.login()
+        .then((conf) => {
+            this._conf = conf;
+            return this.listRecords()
+        })
         .then((records) => {
             this._records = records;
             this._nImages = records.length;
@@ -104,6 +111,26 @@ class Annotator {
         this._currImgIdx++;
 
         return this.update();
+    }
+
+    login() {
+        return new Promise((resolve, reject) => {
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function() {
+                if (this.readyState == 4){
+                    if (this.status != 200) {
+                        reject(new Error("failed to fetch data")); 
+                        return;
+                    }
+
+                    const records = JSON.parse(this.responseText);
+                    resolve(records);
+                    return;
+                }
+            };
+            xmlhttp.open("GET", "/login", true);
+            xmlhttp.send();
+        });
     }
 
     listRecords() {
@@ -158,9 +185,17 @@ class Annotator {
             return this.putImageData(dataUrl);
         })
         .then(() => {
-            // line
+            // mid vertical line 
             this._ctx.beginPath();
-            this._ctx.setLineDash([4, 4])
+            this._ctx.setLineDash([2, 2])
+            this._ctx.moveTo(IMG_WIDTH/2, 0);
+            this._ctx.lineTo(IMG_WIDTH/2, IMG_HEIGHT);
+            this._ctx.strokeStyle = '#f0f080'
+            this._ctx.stroke();
+
+            // aux line to target
+            this._ctx.beginPath();
+            this._ctx.setLineDash([])
             this._ctx.moveTo(this._carPos.x, this._carPos.y);
             this._ctx.lineTo(this._curPos.x, this._curPos.y);
             this._ctx.strokeStyle = '#ffffff'
@@ -247,7 +282,7 @@ class Annotator {
             this._btnPlay.innerHTML = "Stop";
             this._playTimer = setInterval(() => {
                 this.next();
-            }, 50);
+            }, this._conf.frameInterval);
         } else {
             this._btnPlay.innerHTML = "Play";
             clearInterval(this._playTimer);
