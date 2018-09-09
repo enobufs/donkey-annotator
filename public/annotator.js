@@ -4,6 +4,7 @@ const IMG_WIDTH = 160;
 const IMG_HEIGHT = 120;
 const IMG_HRZ_Y = 32;
 const IMG_GRD_Y = 150;
+const MIN_THROTTLE = 0.38
 
 class Annotator {
     constructor() {
@@ -263,17 +264,33 @@ class Annotator {
         });
     }
 
+    xToAngle(x) {
+        return (x / IMG_WIDTH) - 0.5;
+    }
+
+    yToThrottle(y) {
+        return 1 - (y - MIN_THROTTLE) / IMG_HEIGHT;
+    }
+
     cartToValues(pos) {
         return {
-            angle: (pos.x / IMG_WIDTH) - 0.5,
-            throttle: 1 - pos.y / IMG_HEIGHT
+            angle: this.xToAngle(pos.x),
+            throttle: this.yToThrottle(pos.y)
         };
+    }
+
+    angleToX(angle) {
+        return (IMG_WIDTH / 2) * (angle * 2 + 1);
+    }
+
+    throttleToY(throttle) {
+        return IMG_HEIGHT * (1 - throttle) + MIN_THROTTLE;
     }
 
     valuesToCart(angle, throttle) {
         return {
-            x: (IMG_WIDTH / 2) * (angle * 2 + 1),
-            y: IMG_HEIGHT * (1 - throttle)
+            x: this.angleToX(angle),
+            y: this.throttleToY(throttle)
         };
     }
 
