@@ -4,7 +4,6 @@ const IMG_WIDTH = 160;
 const IMG_HEIGHT = 120;
 const IMG_HRZ_Y = 32;
 const IMG_GRD_Y = 150;
-const MIN_THROTTLE = 0.38
 
 class Annotator {
     constructor() {
@@ -269,7 +268,7 @@ class Annotator {
     }
 
     yToThrottle(y) {
-        return 1 - (y - MIN_THROTTLE) / IMG_HEIGHT;
+        return 1 - y / IMG_HEIGHT;
     }
 
     cartToValues(pos) {
@@ -284,7 +283,7 @@ class Annotator {
     }
 
     throttleToY(throttle) {
-        return IMG_HEIGHT * (1 - throttle) + MIN_THROTTLE;
+        return IMG_HEIGHT * (1 - throttle);
     }
 
     valuesToCart(angle, throttle) {
