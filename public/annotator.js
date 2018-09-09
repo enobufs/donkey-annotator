@@ -12,8 +12,12 @@ class Annotator {
         this._ctx.lineWidth = 1;
         this._ctx.lineCap = "round";
         this._result = document.getElementById('resultId');
-        this._bar = document.getElementById("progbar");   
-        this._btnPlay = document.getElementById("btnPlay");   
+        this._bar = document.getElementById("progbar");
+        this._btnPlay = document.getElementById("btnPlay");
+        this._curAngleVal = document.getElementById("curAngleId");
+        this._curThrottleVal = document.getElementById("curThrottleId");
+        this._angleVal = document.getElementById("angleId");
+        this._throttleVal = document.getElementById("throttleId");
         this._records = null;
         this._nImages = 0;
         this._currRec = null;
@@ -41,6 +45,12 @@ class Annotator {
                 x: ev.clientX - rect.left,
                 y: ev.clientY - rect.top
             });
+        }, false);
+
+        window.addEventListener('keydown', (ev) => {
+            if (ev.code == "Space") {
+                this.onMouseClick(this._curPos);
+            }
         }, false);
 
         this._bar.addEventListener('click', () => {
@@ -71,6 +81,9 @@ class Annotator {
 
     onMouseMove(pos) {
         //console.log(`mouse moved to (${pos.x}, ${pos.y})`);
+        const values = this.cartToValues(pos);
+        this._angleVal.innerHTML = values.angle;
+        this._throttleVal.innerHTML = values.throttle;
         this._curPos = pos;
         this.update();
     }
@@ -96,9 +109,7 @@ class Annotator {
         // apply patch
         const rec = this._records[this._currImgIdx];
 
-        console.log('before data:', rec.data);
         rfc6902.applyPatch(rec.data, patch);
-        console.log('after data:', rec.data);
 
         const fileName = rec.name;
         this.updateRecord(fileName, patch)
@@ -214,6 +225,24 @@ class Annotator {
             this._ctx.strokeStyle = '#f0f080'
             this._ctx.stroke();
 
+            // low horizontal line 
+            this._ctx.beginPath();
+            this._ctx.setLineDash([2, 2])
+            const ly = this.throttleToY(0.38);
+            this._ctx.moveTo(0, ly);
+            this._ctx.lineTo(IMG_WIDTH, ly);
+            this._ctx.strokeStyle = '#00f0f0'
+            this._ctx.stroke();
+
+            // high horizontal line 
+            this._ctx.beginPath();
+            this._ctx.setLineDash([2, 2])
+            const hy = this.throttleToY(0.50);
+            this._ctx.moveTo(0, hy);
+            this._ctx.lineTo(IMG_WIDTH, hy);
+            this._ctx.strokeStyle = '#f0f000'
+            this._ctx.stroke();
+
             // aux line to target
             this._ctx.beginPath();
             this._ctx.setLineDash([])
@@ -253,10 +282,13 @@ class Annotator {
             return;
         }
 
-        this._targetPos = this.valuesToCart(
-            this._currRec['user/angle'],
-            this._currRec['user/throttle']
-        );
+        const curAngle = this._currRec['user/angle'];
+        const curThrottle = this._currRec['user/throttle'];
+
+        this._curAngleVal.innerHTML = curAngle;
+        this._curThrottleVal.innerHTML = curThrottle;
+
+        this._targetPos = this.valuesToCart(curAngle, curThrottle);
     }
 
     updateProgressBar() {

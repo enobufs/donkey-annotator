@@ -3,41 +3,68 @@
 <head>
 <meta charset="UTF-8">
 <title>Donkey Car Annotator</title>
-<script src="annotator.js?v=11"></script>
+<script src="annotator.js?v=18"></script>
 <script src="jimp.min.js"></script>
 <script src="rfc6902.min.js"></script>
 
 <style>
-    .mainPanelId {
-      width:160px;
-      align-self: center;
-    }
-    #canvasId {
-      border: 1px solid;
-      cursor: crosshair;
-      display: block;
-    }
-    #progbar {
-      width: 160px;
-      display: block;
-    }
-    button:focus {
-        outline: 0;
-    }
-    #resultId {
-      border: 1px solid;
-      width: 100%;
-      height: 120px;
-      font-size: 10px
-    }
+	.flex-main {
+		display: flex;
+		flex-direction: row;
+	}
+	.flex-controll-panel {
+		display: flex;
+		width: 160px;
+		flex-direction: column;
+		background-color: black;
+	}
+	.flex-playbuttons {
+		display: flex;
+		flex-direction: row;
+		background-color: gray;
+		justify-content: space-between;
+	}
+	#canvasId {
+		display: flex;
+		border: 1px solid;
+		cursor: crosshair;
+	}
+	#progbar {
+		display: flex;
+		width: 96%;
+	}
+	button:focus {
+			outline: 0;
+	}
+	#resultId {
+		border: 1px solid;
+		width: 100%;
+		height: 120px;
+		font-size: 10px
+	}
+	table {
+			font-family: arial, sans-serif;
+			border-collapse: collapse;
+			width: 100%;
+	}
+
+	td, th {
+			border: 1px solid #dddddd;
+			text-align: left;
+			padding: 8px;
+	}
+
+	tr:nth-child(even) {
+			background-color: #f0f0f0;
+	}
 </style>
 
 <script type="text/javascript">
-let onno = null;
+let anno = null;
 
 function start() {
-    onno = new Annotator();
-    onno.start();
+    anno = new Annotator();
+    anno.start();
 }
 </script>
 </head>
@@ -46,36 +73,45 @@ function start() {
     <h2>Donkey Car Annotator</h2>
     <p>Click on the image to update the target (the red mark).</p>
     <p>Hit "Play" to playback the images for a quick review.</p>
-    <table style="width:100%">
-      <tr>
-        <td>
-          <div id=mainPanelId>
-            <canvas width="160" height="120" id="canvasId"></canvas>
-            <input type="range" id="progbar">
-          </div>
-        </td>
-        <td>
-            TODO: show angle/throttle values
-        </td>
-      </tr>
-      <tr>
-        <td>
-          <div>
-            <button onclick="onno.toBeginning()">&lt;&lt;</button>
-            <button onclick="onno.back()">&lt;</button>
-            <button id="btnPlay" onclick="onno.togglePlay()">Play</button>
-            <button onclick="onno.next()">&gt;</button>
-            <button onclick="onno.toEnd()">&gt;&gt;</button>
-          </div>
-        </td>
-        <td>
-            (reserved)
-        </td>
-      </tr>
-    </table>
-    <div>
-        <button onclick="onno.save()">Save</button>
-    </div>
+
+    <div class="flex-main">
+			<div class="flex-left">
+				<div class="flex-controll-panel">
+					<canvas width="160" height="120" id="canvasId"></canvas>
+					<input type="range" id="progbar">
+					<div class="flex-playbuttons">
+						<button onclick="anno.toBeginning()">&lt;&lt;</button>
+						<button onclick="anno.back()">&lt;</button>
+						<button id="btnPlay" onclick="anno.togglePlay()">Play</button>
+						<button onclick="anno.next()" accesskey="n">&gt;</button>
+						<button onclick="anno.toEnd()">&gt;&gt;</button>
+					</div>
+				</div>
+				<div>
+						<button onclick="anno.save()">Save</button>
+				</div>
+			</div>
+			<div class="flex-right">
+				<table>
+					<tr>
+						<td>current angle</td>
+						<td id="curAngleId"></td>
+					</tr>
+					<tr>
+						<td>current throttle</td>
+						<td id="curThrottleId"></td>
+					</tr>
+					<tr>
+						<td>new angle</td>
+						<td id="angleId"></td>
+					</tr>
+					<tr>
+						<td>new throttle</td>
+						<td id="throttleId"></td>
+					</tr>
+				</table>
+			</div>
+		</div>
     <div id="resultId"></div>
 </body>
 </html>
